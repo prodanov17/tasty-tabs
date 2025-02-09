@@ -1,8 +1,9 @@
 from flask import Flask, request, jsonify
 import psycopg2
 import psycopg2.extras
-
+from flask_cors import CORS
 app = Flask(__name__)
+CORS(app, supports_credentials=True)
 
 # --- Database Connection Settings ---
 DB_HOST = "db"
@@ -55,20 +56,29 @@ def login():
 # Employee Views His Shift
 @app.route('/api/employees/<int:employee_id>/shift', methods=['GET'])
 def get_shift(employee_id):
-    conn = get_connection()
-    cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-    query = """
-        SELECT a.id, a.shift_id, a.manager_id, s.start_time, s.end_time 
-        FROM assignments a
-        LEFT JOIN shifts s ON s.id = a.shift_id
-        LEFT JOIN managers m ON a.manager_id = m.employee_id
-        WHERE s.date = current_date AND a.employee_id = %s;
-    """
-    cursor.execute(query, (employee_id,))
-    shifts = cursor.fetchall()
-    cursor.close()
-    conn.close()
-    return jsonify(shifts)
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        query = """
+            SELECT a.id, a.shift_id, a.manager_id, s.start_time, s.end_time 
+            FROM assignments a
+            LEFT JOIN shifts s ON s.id = a.shift_id
+            LEFT JOIN managers m ON a.manager_id = m.employee_id
+            WHERE s.date = current_date AND a.employee_id = %s;
+        """
+        cursor.execute(query, (employee_id,))
+        shifts = cursor.fetchall()
+        # Convert time objects to strings
+        for shift in shifts:
+            shift['start_time'] = str(shift['start_time'])
+            shift['end_time'] = str(shift['end_time'])
+        cursor.close()
+        conn.close()
+        return jsonify(shifts)
+    except Exception as e:
+        app.logger.error(f"Error fetching shift for employee {employee_id}: {e}")
+        return jsonify({"error": "Internal server error"}), 500
+
 
 # Employee Clocks In Work
 @app.route('/api/employees/<int:employee_id>/shift/<int:shift_id>/clock-in', methods=['PATCH'])
@@ -111,6 +121,7 @@ def view_menu():
 def create_tab_order():
     data = request.get_json()
     product_id = data.get('product_id')
+    table_number=data.get('table_number')
     front_staff_id = data.get('front_staff_id')
     if not product_id or not front_staff_id:
         return jsonify({"error": "product_id and front_staff_id are required"}), 400
@@ -123,7 +134,7 @@ def create_tab_order():
     order_id = order['id']
 
     # Link the order to the front staff in tab_orders.
-    cursor.execute("INSERT INTO tab_orders (order_id, front_staff_id) VALUES (%s, %s);", (order_id, front_staff_id))
+    cursor.execute("INSERT INTO tab_orders (order_id, front_staff_id,table_number) VALUES (%s, %s,%s);", (order_id, front_staff_id,table_number))
 
     # Create an initial order item pulling price from products.
     cursor.execute("""

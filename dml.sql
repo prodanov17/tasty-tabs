@@ -39,7 +39,7 @@ VALUES
 
 INSERT INTO shifts (id, date, start_time, end_time, manager_id)
 VALUES
-    (1, '2025-01-05', '09:00:00', '17:00:00', 3);
+    (1, current_date, '09:00:00', '17:00:00', 3);
 
 INSERT INTO assignments(id,clock_in_time,clock_out_time,manager_id,employee_id,shift_id)
 VALUES
