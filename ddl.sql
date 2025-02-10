@@ -73,7 +73,9 @@ CREATE TABLE IF NOT EXISTS tables (
 CREATE TABLE IF NOT EXISTS reservations (
                                             id BIGSERIAL PRIMARY KEY,
                                             customer_id BIGINT NOT NULL,
+                                            creation_timestamp TIMESTAMP NOT NULL,
                                             datetime TIMESTAMP NOT NULL,
+                                            number_of_people BIGINT NOT NULL,
                                             stay_length DECIMAL(10,2) NULL, --hours
     FOREIGN KEY (customer_id) REFERENCES customers (user_id) ON DELETE CASCADE ON UPDATE CASCADE
     );

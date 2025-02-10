@@ -1,5 +1,6 @@
 import ShiftBox from "../components/ShiftBox";
 import { useAuth } from "../dataStorage/useAuth";
+import CustomerDashboard from "./customer/CustomerDashboard";
 import EmployeeDashboard from "./employee/EmployeeDashboard";
 import ManagerDashboard from "./manager/ManagerDashboard";
 const Dashboard = (props) => {
@@ -15,7 +16,7 @@ const Dashboard = (props) => {
             </h1>
             {user.user_type === "employee" && user.role !== "manager" && <EmployeeDashboard />}
             {user.role === "manager" && <ManagerDashboard />}
-            {user.role === "customer" && <div>Customer Dashboard</div>}
+            {user.user_type === "customer" && <CustomerDashboard/>}
 
         </div>
     );

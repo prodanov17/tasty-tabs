@@ -266,3 +266,36 @@ export async function addItemToOrder(inputData) {
     return data;
 }
 
+export async function makeReservation(reservationData) {
+    const response= await fetch(`${API}/api/reservations`,{
+        method: "POST",
+        headers:{
+            "Content-Type" : "application/json",
+        },
+        body: JSON.stringify(reservationData)
+    })
+
+    const data=await response.json();
+    if(!response.ok){
+        console.log("here")
+        throw new Error(data.message || "Could not make a reservation.Try again.");
+    }
+    return data;
+}
+
+export async function getReservations() {
+    const user_id=localStorage.getItem("user_id");
+    console.log(user_id)
+    const response= await fetch(`${API}/api/${user_id}/reservations`,{
+        method: "GET",
+        headers:{
+            "Content-Type" : "application/json",
+        },
+    })
+
+    const data=await response.json();
+    if(!response.ok){
+        throw new Error(data.message || "Could not make a reservation.Try again.");
+    }
+    return data;
+}

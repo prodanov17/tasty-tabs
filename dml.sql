@@ -50,9 +50,9 @@ VALUES
     (1,4),
     (2,8);
 
-INSERT INTO  reservations(id,customer_id,datetime,stay_length)
-VALUES
-    (1,2,now(),NULL);
+-- INSERT INTO  reservations(id,customer_id,creation_timestamp,datetime,stay_length,number_of_people)
+-- VALUES
+--     (1,2,now(),now(),NULL,4);
 
 INSERT INTO frontstaff_managed_reservations(id,reservation_id,front_staff_id,table_number)
 VALUES

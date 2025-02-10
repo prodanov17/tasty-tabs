@@ -625,7 +625,7 @@ def create_reservation():
         available_table_query = """
             SELECT table_number
             FROM tables
-            WHERE seat_capacity >= %s
+            WHERE capacity >= %s
               AND table_number NOT IN (
                 SELECT table_number
                 FROM frontstaff_managed_reservations rmf
@@ -634,7 +634,7 @@ def create_reservation():
               )
             LIMIT 1;
         """
-        cursor.execute(available_table_query, (number_of_people, reservation_datetime, reservation_datetime, stay_length))
+        cursor.execute(available_table_query, (int(number_of_people), reservation_datetime, reservation_datetime, stay_length))
         table_result = cursor.fetchone()
         if not table_result:
             conn.rollback()
@@ -643,7 +643,7 @@ def create_reservation():
 
         # 2. Create the reservation.
         insert_reservation_query = """
-            INSERT INTO reservations (stay_length, datetime, creation_timestamp, number_of_people, user_id)
+            INSERT INTO reservations (stay_length, datetime, creation_timestamp, number_of_people, customer_id)
             VALUES (%s, %s, NOW(), %s, %s)
             RETURNING id;
         """
@@ -667,7 +667,7 @@ def create_reservation():
                 %s
             );
         """
-        cursor.execute(insert_frontstaff_query, (reservation_id, reservation_datetime, available_table_number))
+        # cursor.execute(insert_frontstaff_query, (reservation_id, reservation_datetime, available_table_number))
         conn.commit()
     except Exception as e:
         conn.rollback()
@@ -680,6 +680,49 @@ def create_reservation():
         "reservation_id": reservation_id,
         "table_number": available_table_number
     }), 201
+
+@app.route("/api/<int:customer_id>/reservations", methods=['GET'])
+def get_reservations(customer_id):
+    conn = get_connection()
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    try:
+        query = """
+            SELECT r.id,
+                   r.datetime,
+                   r.number_of_people,
+                   t.table_number,
+                   u.email
+            FROM reservations r
+            JOIN tables t ON r.table_id = t.id
+            JOIN users u ON r.user_id = u.id
+            WHERE r.user_id = %s;
+        """
+        # Execute the query, passing the customer_id as parameter
+        cursor.execute(query, (customer_id,))
+
+        # Fetch all the matching rows
+        reservations = cursor.fetchall()
+
+        # Always remember to close your cursor/connection after usage
+        cursor.close()
+        conn.close()
+
+        # Return the results as JSON (Flask's jsonify will convert to JSON)
+        return jsonify(reservations), 200
+
+    except Exception as e:
+        # If something goes wrong, log the error
+        print(f"Error while fetching reservations: {e}")
+
+        # Close cursor/connection if open
+        if not cursor.closed:
+            cursor.close()
+        if conn:
+            conn.close()
+
+        # Return an error response
+        return jsonify({"error": "Unable to fetch reservations"}), 500
+
 
 @app.route('/api/reservations/<int:reservation_id>', methods=['GET'])
 def get_reservation_details(reservation_id):
