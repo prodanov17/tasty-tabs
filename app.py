@@ -11,11 +11,6 @@ DB_NAME = "tasty-tabs"
 DB_USER = "root"
 DB_PASS = "root"
 DB_PORT = "5432"  # adjust if necessary
-# DB_HOST = "localhost"
-# DB_NAME = "db_202425z_va_prj_tasty_tabs"
-# DB_USER = "db_202425z_va_prj_tasty_tabs_owner"
-# DB_PASS = "99e003badb51"
-# DB_PORT = "5432"  # adjust if necessary
 
 def get_connection():
     return psycopg2.connect(
@@ -39,20 +34,143 @@ def login():
 
     conn = get_connection()
     cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+    # Get the user record from the users table.
     query = "SELECT id, email, password FROM users WHERE email = %s;"
     cursor.execute(query, (email,))
     user_record = cursor.fetchone()
+
+    if not user_record:
+        cursor.close()
+        conn.close()
+        return jsonify({"error": "User not found"}), 404
+
+    # Minimal (plaintext) password check.
+    if password != user_record['password']:
+        cursor.close()
+        conn.close()
+        return jsonify({"error": "Invalid credentials"}), 401
+
+    user_id = user_record['id']
+    user_type = None
+    role = None
+
+    # First, check if the user is a customer.
+    cursor.execute("SELECT user_id FROM customers WHERE user_id = %s;", (user_id,))
+    customer_record = cursor.fetchone()
+    if customer_record:
+        user_type = "customer"
+    else:
+        # If not a customer, check if the user is an employee.
+        cursor.execute("SELECT user_id FROM employees WHERE user_id = %s;", (user_id,))
+        employee_record = cursor.fetchone()
+        if not employee_record:
+            # Shouldn't happen if your data integrity is correct.
+            cursor.close()
+            conn.close()
+            return jsonify({"error": "User type could not be determined"}), 500
+
+        user_type = "employee"
+        # Now check the employee's role.
+        cursor.execute("SELECT employee_id, tip_percent, staff_role_id FROM front_staff WHERE employee_id = %s;", (user_id,))
+        front_staff_record = cursor.fetchone()
+        if front_staff_record:
+            role = "front_staff"
+        else:
+            cursor.execute("SELECT employee_id, staff_role_id FROM back_staff WHERE employee_id = %s;", (user_id,))
+            back_staff_record = cursor.fetchone()
+            if back_staff_record:
+                role = "back_staff"
+            else:
+                cursor.execute("SELECT employee_id FROM managers WHERE employee_id = %s;", (user_id,))
+                manager_record = cursor.fetchone()
+                if manager_record:
+                    role = "manager"
+                else:
+                    role = "unknown"
+
     cursor.close()
     conn.close()
 
+    response = {
+        "message": "Login successful",
+        "user": {
+            "id": user_record["id"],
+            "email": user_record["email"],
+            "user_type": user_type
+        }
+    }
+    if role:
+        response["user"]["role"] = role
+
+    return jsonify(response)
+
+@app.route('/api/users/<int:user_id>', methods=['GET'])
+def get_user(user_id):
+    conn = get_connection()
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+    # Retrieve the user record
+    query = "SELECT id, email FROM users WHERE id = %s;"
+    cursor.execute(query, (user_id,))
+    user_record = cursor.fetchone()
+
     if not user_record:
+        cursor.close()
+        conn.close()
         return jsonify({"error": "User not found"}), 404
 
-    # Minimal password check (in production use hashed passwords)
-    if password != user_record['password']:
-        return jsonify({"error": "Invalid credentials"}), 401
+    # Determine the user type and role
+    user_type = None
+    role = None
 
-    return jsonify({"message": "Login successful", "user": user_record})
+    # Check if the user is a customer
+    cursor.execute("SELECT user_id FROM customers WHERE user_id = %s;", (user_id,))
+    customer_record = cursor.fetchone()
+    if customer_record:
+        user_type = "customer"
+    else:
+        # Otherwise, check if the user is an employee
+        cursor.execute("SELECT user_id FROM employees WHERE user_id = %s;", (user_id,))
+        employee_record = cursor.fetchone()
+        if not employee_record:
+            cursor.close()
+            conn.close()
+            return jsonify({"error": "User type could not be determined"}), 500
+
+        user_type = "employee"
+        # Determine the specific role
+        cursor.execute("SELECT employee_id, tip_percent, staff_role_id FROM front_staff WHERE employee_id = %s;", (user_id,))
+        front_staff_record = cursor.fetchone()
+        if front_staff_record:
+            role = "front_staff"
+        else:
+            cursor.execute("SELECT employee_id, staff_role_id FROM back_staff WHERE employee_id = %s;", (user_id,))
+            back_staff_record = cursor.fetchone()
+            if back_staff_record:
+                role = "back_staff"
+            else:
+                cursor.execute("SELECT employee_id FROM managers WHERE employee_id = %s;", (user_id,))
+                manager_record = cursor.fetchone()
+                if manager_record:
+                    role = "manager"
+                else:
+                    role = "unknown"
+
+    cursor.close()
+    conn.close()
+
+    response = {
+        "user": {
+            "id": user_record["id"],
+            "email": user_record["email"],
+            "user_type": user_type
+        }
+    }
+    if role:
+        response["user"]["role"] = role
+
+    return jsonify(response), 200
 
 # ============================
 # Employee Endpoints
@@ -300,21 +418,36 @@ def pay_order(order_id):
         cursor.close()
         conn.close()
     return jsonify({"message": "Payment recorded", "payment_id": payment["id"], "amount": total_amount}), 201
-
 # ============================
 # Manager Endpoints
 # ============================
 
-# Manager Creates a Shift
-@app.route('/api/shift', methods=['POST'])
-def create_shift():
+# GET shifts for a specific manager (using the manager_id path variable)
+@app.route('/api/managers/<int:manager_id>/shifts', methods=['GET'])
+def get_shifts(manager_id):
+    conn = get_connection()
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    # Filter shifts for the given manager_id
+    query = "SELECT date, start_time, end_time, manager_id, id FROM shifts WHERE manager_id = %s AND date >= current_date;"
+    cursor.execute(query, (manager_id,))
+    shifts = cursor.fetchall()
+    for shift in shifts:
+        shift['start_time'] = str(shift['start_time'])
+        shift['end_time'] = str(shift['end_time'])
+    cursor.close()
+    conn.close()
+    return jsonify(shifts), 200
+
+# POST creates a new shift for a manager using path variables:
+# URL pattern: /api/managers/<manager_id>/shifts/<date>/<start_time>/<end_time>
+@app.route('/api/managers/<int:manager_id>/shifts', methods=['POST'])
+def create_shift(manager_id):
+    # Optionally, you can validate that the date, start_time, and end_time strings match your expected format.
     data = request.get_json()
+
     date = data.get('date')
     start_time = data.get('start_time')
     end_time = data.get('end_time')
-    manager_id = data.get('manager_id')
-    if not date or not start_time or not end_time or not manager_id:
-        return jsonify({"error": "date, start_time, end_time, and manager_id are required"}), 400
 
     conn = get_connection()
     cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
@@ -325,6 +458,7 @@ def create_shift():
     """
     cursor.execute(query, (date, start_time, end_time, manager_id))
     shift = cursor.fetchone()
+
     conn.commit()
     cursor.close()
     conn.close()
