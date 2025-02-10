@@ -1,65 +1,102 @@
 import { useCallback, useEffect, useState } from "react";
+import ShiftsTab from "./tabs/ShiftsTab";
+import EmployeesTab from "./tabs/EmployeesTab";
+import { assignShiftToEmployee, createShift, getEmployees, getManagerShifts, getShiftEmployees } from "../../dataStorage/api";
 import { useAuth } from "../../dataStorage/useAuth";
-import { getManagerShifts } from "../../dataStorage/api";
 
-const ManagerDashboard = (props) => {
-    const { user } = useAuth();
+// ManagerDashboard with color-changing tabs (no borders)
+const ManagerDashboard = () => {
+    const [activeTab, setActiveTab] = useState("shifts");
+    const [shiftEmployees, setShiftEmployees] = useState([]);
+    const [employees, setEmployees] = useState([]);
     const [shifts, setShifts] = useState([]);
+    const { user } = useAuth()
 
     const fetchShifts = useCallback(async () => {
-        if (!user) {
-            return;
+        if (!user) return;
+        try {
+            const response = await getManagerShifts(user.id);
+            if (response) {
+                setShifts(response);
+            }
+            console.log(response);
+        } catch (error) {
+            console.error("Failed to fetch shifts:", error);
         }
-        const response = await getManagerShifts(user.id);
-
-        if (response && response) {
-            setShifts(response);
-        }
-
-        console.log(response);
-
     }, [user]);
+
+    const fetchEmployees = useCallback(async () => {
+        if (!user) return;
+        try {
+            const response = await getEmployees();
+            if (response) {
+                setEmployees(response);
+            }
+            console.log(response);
+        } catch (error) {
+            console.error("Failed to fetch shifts:", error);
+        }
+    }, [user]);
+
+    const assignShift = async (shiftId, employeeId, managerId) => {
+        try {
+            const response = await assignShiftToEmployee(shiftId, employeeId, managerId);
+            if (response) {
+                fetchShifts();
+            }
+        } catch (error) {
+            console.error("Failed to assign employee to shift:", error);
+        }
+    }
+
+    const handleCreateShift = async (manager_id, date, start_time, end_time) => {
+        try {
+            const response = await createShift(manager_id, date, start_time, end_time);
+            if (response) {
+                fetchShifts();
+            }
+        }
+        catch (error) {
+            console.error("Failed to create shift:", error);
+        }
+    }
+
 
 
     useEffect(() => {
         fetchShifts();
-    }, [fetchShifts]);
-    return (
-        <div className="w-full flex flex-col gap-4 justify-start  p-4">
-            <button className="bg-blue-500 w-fit text-white px-4 py-2 rounded-lg shadow-md hover:bg-blue-600 disabled:bg-gray-400">Create Shift</button>
+        fetchEmployees();
+    }, [fetchShifts, fetchEmployees,]);
 
-            <div className="w-full flex flex-col gap-2 justify-start items-start ">
-                {shifts.map((shift) => (
-                    <div key={shift.shift_id} className="bg-white rounded-2xl p-4 w-full mx-auto">
-                        <h2 className="text-xl font-semibold text-gray-800">Shift Details</h2>
-                        <div className="mt-4">
-                            <p className="text-gray-600">
-                                <span className="font-semibold">Shift ID:</span>{" "}
-                                {shift.id}
-                            </p>
-                            <p className="text-gray-600">
-                                <span className="font-semibold">Manager ID:</span>{" "}
-                                {shift.manager_id}
-                            </p>
-                            <p className="text-gray-600">
-                                <span className="font-semibold">Start Time:</span>{" "}
-                                {shift.start_time}
-                            </p>
-                            <p className="text-gray-600">
-                                <span className="font-semibold">End Time:</span>{" "}
-                                {shift.end_time}
-                            </p>
-                            <p className="text-gray-600">
-                                <span className="font-semibold">Date:</span>{" "}
-                                {new Date(shift.date).toLocaleDateString()}
-                            </p>
-                        </div>
-                    </div>
-                ))}
+
+    return (
+        <div className="w-full p-4">
+            <div className="flex bg-gray-200 rounded mb-4 w-max mx-4">
+                <button
+                    onClick={() => setActiveTab("employees")}
+                    className={`py-2 cursor-pointer px-4 rounded ${activeTab === "employees"
+                        ? "bg-blue-500 text-white"
+                        : "bg-gray-200 text-gray-800"
+                        }`}
+                >
+                    Employees
+                </button>
+                <button
+                    onClick={() => setActiveTab("shifts")}
+                    className={`py-2 cursor-pointer px-4 rounded ${activeTab === "shifts"
+                        ? "bg-blue-500 text-white"
+                        : "bg-gray-200 text-gray-800"
+                        }`}
+                >
+                    Shifts
+                </button>
+            </div>
+            <div>
+                {activeTab === "employees" && <EmployeesTab employees={employees} shifts={shifts} assignShift={assignShift} />}
+                {activeTab === "shifts" && <ShiftsTab shifts={shifts} employees={employees} assignShift={assignShift} createShift={handleCreateShift} />}
             </div>
         </div>
     );
 };
 
 export default ManagerDashboard;
-

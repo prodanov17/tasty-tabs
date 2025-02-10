@@ -14,6 +14,76 @@ export async function getUser(user_id) {
     return data;
 }
 
+export async function getShiftEmployees(shift_id) {
+    const response = await fetch(
+        `${API}/api/shifts/${parseInt(shift_id, 10)}/assignments`
+    );
+
+    const data = await response.json();
+    console.log(data);
+    if (!response.ok) {
+        throw new Error(data.message || "Could not fetch Employees.");
+    }
+
+    return data;
+}
+export async function getEmployees() {
+    const response = await fetch(`${API}/api/employees`);
+
+    const data = await response.json();
+    console.log(data);
+    if (!response.ok) {
+        throw new Error(data.message || "Could not fetch Employees.");
+    }
+
+    return data;
+}
+
+export async function createShift(manager_id, date, start_time, end_time) {
+    const response = await fetch(`${API}/api/managers/${manager_id}/shifts`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify(
+            {
+                date: date,
+                start_time: start_time,
+                end_time: end_time,
+            }
+        ),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+        throw new Error(data.message || "Could not create Shift.");
+    }
+
+    return data;
+}
+
+export async function assignShiftToEmployee(shiftId, employeeId, managerId) {
+    const response = await fetch(`${API}/api/shift/${parseInt(shiftId, 10)}/assignment`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+            employee_id: parseInt(employeeId, 10),
+            manager_id: parseInt(managerId, 10),
+        }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+        throw new Error(data.message || "Could not assign employee to shift.");
+    }
+
+    return data;
+}
+
 export async function getManagerShifts(manager_id) {
     const response = await fetch(`${API}/api/managers/${parseInt(manager_id, 10)}/shifts`);
 

@@ -205,6 +205,51 @@ def get_shift(employee_id):
         return jsonify({"error": "Internal server error"}), 500
 
 
+@app.route('/api/shifts/<int:shift_id>/assignments', methods=['GET'])
+def get_assignments_by_shift(shift_id):
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        query = """
+            SELECT 
+                a.id AS assignment_id,
+                a.shift_id,
+                a.manager_id,
+                s.start_time,
+                s.end_time,
+                a.clock_in_time,
+                a.clock_out_time,
+                a.employee_id,
+                u.email,
+                u.phone_number,
+                u.street,
+                u.city,
+                e.net_salary,
+                e.gross_salary
+            FROM assignments a
+            LEFT JOIN shifts s ON s.id = a.shift_id
+            LEFT JOIN employees e ON e.user_id = a.employee_id
+            LEFT JOIN users u ON u.id = a.employee_id
+            WHERE a.shift_id = %s;
+        """
+        cursor.execute(query, (shift_id,))
+        assignments = cursor.fetchall()
+
+        # Convert time objects to strings
+        for assignment in assignments:
+            assignment['start_time'] = str(assignment['start_time'])
+            assignment['end_time'] = str(assignment['end_time'])
+            assignment['clock_in_time'] = str(assignment['clock_in_time']) if assignment['clock_in_time'] else None
+            assignment['clock_out_time'] = str(assignment['clock_out_time']) if assignment['clock_out_time'] else None
+
+        cursor.close()
+        conn.close()
+        return jsonify(assignments), 200
+
+    except Exception as e:
+        app.logger.error(f"Error fetching assignments for shift {shift_id}: {e}")
+        return jsonify({"error": "Internal server error"}), 500
+
 # Employee Clocks In Work
 @app.route('/api/employees/<int:employee_id>/shift/<int:shift_id>/clock-in', methods=['PATCH'])
 def clock_in(employee_id, shift_id):
@@ -422,6 +467,31 @@ def pay_order(order_id):
 # Manager Endpoints
 # ============================
 
+@app.route('/api/employees', methods=['GET'])
+def get_all_employees():
+    conn = get_connection()
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+    # Join employees with users to retrieve details from both tables.
+    query = """
+        SELECT 
+            u.id AS user_id,
+            u.email,
+            u.phone_number,
+            u.street,
+            u.city,
+            e.net_salary,
+            e.gross_salary
+        FROM employees e
+        JOIN users u ON e.user_id = u.id;
+    """
+    cursor.execute(query)
+    employees = cursor.fetchall()
+    cursor.close()
+    conn.close()
+
+    return jsonify(employees), 200
+
 # GET shifts for a specific manager (using the manager_id path variable)
 @app.route('/api/managers/<int:manager_id>/shifts', methods=['GET'])
 def get_shifts(manager_id):
@@ -443,12 +513,13 @@ def get_shifts(manager_id):
 @app.route('/api/managers/<int:manager_id>/shifts', methods=['POST'])
 def create_shift(manager_id):
     # Optionally, you can validate that the date, start_time, and end_time strings match your expected format.
+    print("Request received")
     data = request.get_json()
 
     date = data.get('date')
     start_time = data.get('start_time')
     end_time = data.get('end_time')
-
+    print(date, start_time, end_time, manager_id)
     conn = get_connection()
     cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     query = """
@@ -458,7 +529,6 @@ def create_shift(manager_id):
     """
     cursor.execute(query, (date, start_time, end_time, manager_id))
     shift = cursor.fetchone()
-
     conn.commit()
     cursor.close()
     conn.close()

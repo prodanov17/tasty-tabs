@@ -7,9 +7,9 @@
     <list default="true" id="eeb0ac8f-7e09-4015-9da1-9069dc1bbd40" name="Changes" comment="cooked all routes">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app.py" beforeDir="false" afterPath="$PROJECT_DIR$/app.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tasty-tabs-frontend/src/dataStorage/Auth-context.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/tasty-tabs-frontend/src/dataStorage/Auth-context.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/dml.sql" beforeDir="false" afterPath="$PROJECT_DIR$/dml.sql" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/tasty-tabs-frontend/src/dataStorage/api.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/tasty-tabs-frontend/src/dataStorage/api.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tasty-tabs-frontend/src/pages/Dashboard.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/tasty-tabs-frontend/src/pages/Dashboard.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tasty-tabs-frontend/src/pages/manager/ManagerDashboard.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/tasty-tabs-frontend/src/pages/manager/ManagerDashboard.jsx" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -114,7 +114,7 @@
       <option name="presentableId" value="Default" />
       <updated>1739102013098</updated>
       <workItem from="1739102014510" duration="1182000" />
-      <workItem from="1739104123648" duration="10085000" />
+      <workItem from="1739104123648" duration="14665000" />
     </task>
     <task id="LOCAL-00001" summary="added basic routes and dockerized">
       <option name="closed" value="true" />
