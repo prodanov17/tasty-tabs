@@ -11,6 +11,11 @@ DB_NAME = "tasty-tabs"
 DB_USER = "root"
 DB_PASS = "root"
 DB_PORT = "5432"  # adjust if necessary
+# DB_HOST = "localhost"
+# DB_NAME = "db_202425z_va_prj_tasty_tabs"
+# DB_USER = "db_202425z_va_prj_tasty_tabs_owner"
+# DB_PASS = "99e003badb51"
+# DB_PORT = "5432"  # adjust if necessary
 
 def get_connection():
     return psycopg2.connect(
@@ -60,7 +65,7 @@ def get_shift(employee_id):
         conn = get_connection()
         cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         query = """
-            SELECT a.id, a.shift_id, a.manager_id, s.start_time, s.end_time 
+            SELECT a.id, a.shift_id, a.manager_id, s.start_time, s.end_time, a.clock_in_time, a.clock_out_time 
             FROM assignments a
             LEFT JOIN shifts s ON s.id = a.shift_id
             LEFT JOIN managers m ON a.manager_id = m.employee_id
@@ -72,6 +77,8 @@ def get_shift(employee_id):
         for shift in shifts:
             shift['start_time'] = str(shift['start_time'])
             shift['end_time'] = str(shift['end_time'])
+            shift['clock_in_time'] = str(shift['clock_in_time']) if shift['clock_in_time'] else None
+            shift['clock_out_time'] = str(shift['clock_out_time']) if shift['clock_out_time'] else None
         cursor.close()
         conn.close()
         return jsonify(shifts)
