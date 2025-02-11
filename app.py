@@ -690,12 +690,10 @@ def get_reservations(customer_id):
             SELECT r.id,
                    r.datetime,
                    r.number_of_people,
-                   t.table_number,
                    u.email
             FROM reservations r
-            JOIN tables t ON r.table_id = t.id
-            JOIN users u ON r.user_id = u.id
-            WHERE r.user_id = %s;
+            JOIN users u ON r.customer_id = u.id
+            WHERE r.customer_id = %s;
         """
         # Execute the query, passing the customer_id as parameter
         cursor.execute(query, (customer_id,))

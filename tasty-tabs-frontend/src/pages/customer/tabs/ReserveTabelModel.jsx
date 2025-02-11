@@ -1,7 +1,7 @@
 import React,{ useState ,useRef} from "react";
 import useHttp from "../../../dataStorage/use-http";
 import { makeReservation } from "../../../dataStorage/api";
-const ReserveTabelModel = () =>{
+const ReserveTabelModel = ({ onReservationSuccess }) =>{
     const [isModalOpen, setModalOpen] = useState(false);
     const { sendRequest, status, data, error } = useHttp(makeReservation, true);
     const [hasError,setHasError] = useState(false);
@@ -27,6 +27,7 @@ const ReserveTabelModel = () =>{
     
         alert("You have successfully reserved a table!");
         closeModal();
+        onReservationSuccess()
       } catch (error) {
         console.error(error);
         alert(error.message || "Could not make a reservation. Try again.");
