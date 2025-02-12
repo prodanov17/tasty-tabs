@@ -1,4 +1,5 @@
 from flask import Flask, request, jsonify
+from datetime import date
 import psycopg2
 import psycopg2.extras
 from flask_cors import CORS
@@ -182,17 +183,19 @@ def get_shift(employee_id):
     try:
         conn = get_connection()
         cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
         query = """
-            SELECT a.id, a.shift_id, a.manager_id, s.start_time, s.end_time, a.clock_in_time, a.clock_out_time 
+            SELECT a.id,s.date, a.shift_id, a.manager_id, s.start_time, s.end_time, a.clock_in_time, a.clock_out_time
             FROM assignments a
             LEFT JOIN shifts s ON s.id = a.shift_id
             LEFT JOIN managers m ON a.manager_id = m.employee_id
-            WHERE s.date = current_date AND a.employee_id = %s;
+            WHERE s.date = CURRENT_DATE AND a.employee_id = %s;
         """
         cursor.execute(query, (employee_id,))
         shifts = cursor.fetchall()
         # Convert time objects to strings
         for shift in shifts:
+            shift['date']=str(shift['date'])
             shift['start_time'] = str(shift['start_time'])
             shift['end_time'] = str(shift['end_time'])
             shift['clock_in_time'] = str(shift['clock_in_time']) if shift['clock_in_time'] else None
@@ -767,6 +770,25 @@ def cancel_reservation(reservation_id):
 # ============================
 # Tab Transfer Endpoints
 # ============================
+@app.route('/api/tables', methods=['GET'])
+def get_tables():
+
+    conn = get_connection()
+    cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    try:
+        query = """
+            SELECT table_number,capacity 
+            FROM tables
+        """
+        cursor.execute(query)
+        tabs = cursor.fetchall()
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cursor.close()
+        conn.close()
+    return jsonify(tabs), 200
+
 
 # Get All Tabs Assigned to a Front Staff Member
 @app.route('/api/tabs', methods=['GET'])
