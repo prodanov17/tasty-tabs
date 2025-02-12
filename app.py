@@ -282,7 +282,7 @@ def clock_out(employee_id, shift_id):
 def view_menu():
     conn = get_connection()
     cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-    query = "SELECT p.id, p.name FROM products p;"
+    query = "SELECT p.id, p.name,p.price FROM products p;"
     cursor.execute(query)
     menu_items = cursor.fetchall()
     cursor.close()
@@ -568,18 +568,23 @@ def assign_shift(shift_id):
 @app.route('/api/online/orders', methods=['POST'])
 def create_online_order():
     data = request.get_json()
-    status = data.get("status", "PENDING")
+    
+    # Extract fields from the request
     datetime_str = data.get("datetime")
     delivery_address = data.get("delivery_address")
     customer_id = data.get("customer_id")
-    product_id = data.get("product_id")
-    quantity = data.get("quantity")
-    if not (datetime_str and delivery_address and customer_id and product_id and quantity):
-        return jsonify({"error": "datetime, delivery_address, customer_id, product_id, and quantity are required"}), 400
+    status = data.get("status", "PENDING")
+    items = data.get("items")  # ← a list of {product_id, quantity} objects
+
+    # Basic validation
+    if not (datetime_str and delivery_address and customer_id and items):
+        return jsonify({"error": "datetime, delivery_address, customer_id, and items are required"}), 400
 
     conn = get_connection()
     cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     try:
+        print("FIRST INSERT")
+        # 1. Insert into orders table
         cursor.execute(
             "INSERT INTO orders (status, datetime) VALUES (%s, %s) RETURNING id;",
             (status, datetime_str)
@@ -587,16 +592,29 @@ def create_online_order():
         order = cursor.fetchone()
         order_id = order["id"]
 
+        print("SECOND INSERT")
+
+        # 2. Insert into online_orders
         cursor.execute(
             "INSERT INTO online_orders (order_id, delivery_address, customer_id) VALUES (%s, %s, %s);",
             (order_id, delivery_address, customer_id)
         )
 
-        cursor.execute(
-            "INSERT INTO order_items (order_id, product_id, is_processed, price, quantity) "
-            "SELECT %s, %s, true, price, %s FROM products WHERE id = %s;",
-            (order_id, product_id, quantity, product_id)
-        )
+        # 3. Insert each item in the list into order_items
+        print("itemns INSERT")
+
+        for item in items:
+            product_id = item["id"]
+            quantity = item["quantity"]
+
+            cursor.execute(
+                """INSERT INTO order_items (order_id, product_id, is_processed, price, quantity)
+                   SELECT %s, %s, true, price, %s
+                   FROM products
+                   WHERE id = %s;""",
+                (order_id, product_id, quantity, product_id)
+            )
+        print("DONE")
         conn.commit()
     except Exception as e:
         conn.rollback()
@@ -604,6 +622,7 @@ def create_online_order():
     finally:
         cursor.close()
         conn.close()
+
     return jsonify({"message": "Order created", "order_id": order_id}), 201
 
 # ============================

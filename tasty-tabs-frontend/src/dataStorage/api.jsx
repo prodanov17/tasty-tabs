@@ -175,6 +175,7 @@ export async function getMenu() {
     for (const key in data) {
         transformedData.push(data[key]);
     }
+    console.log(transformedData);
     return transformedData;
 }
 
@@ -313,5 +314,24 @@ export async function getReservations() {
     if(!response.ok){
         throw new Error(data.message || "Could not make a reservation.Try again.");
     }
+    return data;
+}
+
+export async function makeOnlineOrder(inputData) {
+    console.log(inputData);
+    const response = await fetch(`${API}/api/online/orders`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify(inputData),
+    });
+
+    const data = await response.json();
+    console.log(data)
+    if (!response.ok) {
+        throw new Error(data.message || "Could not create online order.");
+    }
+
     return data;
 }

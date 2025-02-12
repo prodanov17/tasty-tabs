@@ -1,6 +1,7 @@
 import { useState } from "react";
 import ReserveTabelModel from "./tabs/ReserveTabelModel";
 import Reservations from "./tabs/Reservations";
+import MenuOrder from "./tabs/MenuOrder";
 
 
 const CustomerDashboard = () =>{
@@ -14,6 +15,7 @@ const CustomerDashboard = () =>{
         <div>
             <ReserveTabelModel onReservationSuccess={handleReservationSuccess}/>
             <Reservations reloadTrigger={reloadReservations}/>
+            <MenuOrder/>
         </div>
     )
 }
