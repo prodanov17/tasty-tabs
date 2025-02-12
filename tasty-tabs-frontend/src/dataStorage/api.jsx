@@ -97,6 +97,7 @@ export async function getManagerShifts(manager_id) {
 }
 
 export async function getShift(employee_id) {
+    console.log(employee_id);
     const response = await fetch(
         `${API}/api/employees/${parseInt(employee_id, 10)}/shift`
     );
@@ -175,6 +176,21 @@ export async function getMenu() {
         transformedData.push(data[key]);
     }
     return transformedData;
+}
+
+export async function getTables() {
+  const response = await fetch(`${API}/api/tables`);
+
+  const data = await response.json();
+  console.log(data);
+  if (!response.ok) {
+    throw new Error(data.message || "Could not fetch Menu items.");
+  }
+  const transformedData = [];
+  for (const key in data) {
+    transformedData.push(data[key]);
+  }
+  return transformedData;
 }
 
 export async function createTab(inputData) {
